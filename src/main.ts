@@ -1,60 +1,121 @@
-import './style.css'
-import typescriptLogo from './assets/typescript.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import { setupCounter } from './counter.ts'
+import mqtt, { MqttClient, IClientOptions } from 'mqtt';
+import Chart from 'chart.js/auto';
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${typescriptLogo}" class="framework" alt="TypeScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.ts</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+// --- Konfigurasi HiveMQ Cloud ---
+// Gunakan awalan wss:// dan akhiri dengan port 8884 dan path /mqtt
+const brokerUrl: string = 'wss://271b811040564cd49620c495a0b86c55.s1.eu.hivemq.cloud:8884/mqtt';
 
-<div class="ticks"></div>
+const mqttOptions: IClientOptions = {
+  username: 'Andhika',
+  password: 'Andhika123',
+  clientId: `orakom_web_${Math.random().toString(16).slice(3)}`,
+};
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://www.typescriptlang.org" target="_blank">
-          <img class="button-icon" src="${typescriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
+const TOPIC_SUHU = 'orakom/greenhouse/suhu';
+const TOPIC_CAHAYA = 'orakom/greenhouse/cahaya';
+const TOPIC_KONTROL = 'orakom/greenhouse/kontrol_atap';
 
-<div class="ticks"></div>
-<section id="spacer"></section>
-`
+const elSuhu = document.getElementById('suhuValue') as HTMLSpanElement;
+const elCahaya = document.getElementById('cahayaValue') as HTMLSpanElement;
+const elStatus = document.getElementById('statusAtap') as HTMLSpanElement;
+const elConnStatus = document.getElementById('connectionStatus') as HTMLDivElement;
+const elConnText = document.getElementById('connectionText') as HTMLSpanElement;
+const btnBuka = document.getElementById('btnBuka') as HTMLButtonElement;
+const btnTutup = document.getElementById('btnTutup') as HTMLButtonElement;
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+const ctx = (document.getElementById('logChart') as HTMLCanvasElement).getContext('2d');
+let logChart: Chart;
+
+if (ctx) {
+  logChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [] as string[],
+      datasets: [{
+        label: 'Suhu (°C)',
+        data: [] as number[],
+        borderColor: '#22c55e',
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        borderWidth: 2,
+        pointRadius: 3,
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { display: true, title: { display: true, text: 'Waktu' } },
+        y: { display: true, title: { display: true, text: 'Suhu (°C)' }, suggestedMin: 20, suggestedMax: 40 }
+      },
+      animation: { duration: 0 }
+    }
+  });
+}
+
+function updateChart(suhu: string): void {
+  if (!logChart) return;
+  
+  const now = new Date();
+  const timeLabel = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+  
+  const dataRef = logChart.data;
+  if (dataRef.labels && dataRef.labels.length > 20) {
+    dataRef.labels.shift();
+    dataRef.datasets[0].data.shift();
+  }
+  
+  dataRef.labels?.push(timeLabel);
+  dataRef.datasets[0].data.push(parseFloat(suhu));
+  logChart.update();
+}
+
+// --- Koneksi MQTT ---
+console.log('Mencoba terhubung ke broker...', brokerUrl);
+const client: MqttClient = mqtt.connect(brokerUrl, mqttOptions);
+
+client.on('connect', () => {
+  console.log('Berhasil terhubung ke MQTT Broker (HiveMQ Cloud)');
+  elConnStatus.classList.replace('bg-red-500', 'bg-green-500');
+  elConnText.innerText = 'Online';
+  
+  client.subscribe([TOPIC_SUHU, TOPIC_CAHAYA], (err) => {
+    if (err) console.error('Gagal subscribe:', err);
+  });
+});
+
+client.on('error', (err: Error) => {
+  console.error('Koneksi MQTT Error:', err);
+  elConnText.innerText = 'Error / Ditolak';
+});
+
+client.on('message', (topic: string, message: Buffer) => {
+  const val = message.toString();
+  if (topic === TOPIC_SUHU) {
+    elSuhu.innerText = val;
+    updateChart(val);
+  } else if (topic === TOPIC_CAHAYA) {
+    elCahaya.innerText = val;
+  }
+});
+
+btnBuka.addEventListener('click', () => {
+  if (client.connected) {
+    client.publish(TOPIC_KONTROL, 'buka');
+    elStatus.innerText = 'Terbuka';
+    elStatus.classList.replace('text-slate-700', 'text-green-600');
+  } else {
+    alert('Belum terhubung ke broker MQTT!');
+  }
+});
+
+btnTutup.addEventListener('click', () => {
+  if (client.connected) {
+    client.publish(TOPIC_KONTROL, 'tutup');
+    elStatus.innerText = 'Tertutup';
+    elStatus.classList.replace('text-green-600', 'text-slate-700');
+  } else {
+    alert('Belum terhubung ke broker MQTT!');
+  }
+});

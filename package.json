@@ -9,7 +9,12 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/mqtt": "^0.0.34",
     "typescript": "~6.0.2",
     "vite": "^8.1.0"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "mqtt": "^5.15.1"
   }
 }
