@@ -1,21 +1,9 @@
-import mqtt, { type MqttClient, type IClientOptions } from 'mqtt';
-import Chart from 'chart.js/auto';
+import { GreenhouseChart } from './components/ChartComponent';
+import { MqttService } from './services/MqttService';
 
-// --- Konfigurasi HiveMQ Cloud ---
-// Gunakan awalan wss:// dan akhiri dengan port 8884 dan path /mqtt
-const brokerUrl: string = import.meta.env.VITE_MQTT_URL;
-
-const mqttOptions: IClientOptions = {
-  username: import.meta.env.VITE_MQTT_USERNAME,
-  password: import.meta.env.VITE_MQTT_PASSWORD,
-  clientId: `orakom_web_${Math.random().toString(16).slice(3)}`,
-};
-
-const TOPIC_SUHU = 'orakom/greenhouse/suhu';
-const TOPIC_CAHAYA = 'orakom/greenhouse/cahaya';
-const TOPIC_KONTROL = 'orakom/greenhouse/kontrol_atap';
-
+// --- Mengambil Semua Elemen DOM ---
 const elSuhu = document.getElementById('suhuValue') as HTMLSpanElement;
+const elKelembaban = document.getElementById('kelembabanValue') as HTMLSpanElement;
 const elCahaya = document.getElementById('cahayaValue') as HTMLSpanElement;
 const elStatus = document.getElementById('statusAtap') as HTMLSpanElement;
 const elConnStatus = document.getElementById('connectionStatus') as HTMLDivElement;
@@ -23,99 +11,56 @@ const elConnText = document.getElementById('connectionText') as HTMLSpanElement;
 const btnBuka = document.getElementById('btnBuka') as HTMLButtonElement;
 const btnTutup = document.getElementById('btnTutup') as HTMLButtonElement;
 
-const ctx = (document.getElementById('logChart') as HTMLCanvasElement).getContext('2d');
-let logChart: Chart;
+// --- Inisialisasi Komponen Grafik ---
+const greenhouseChart = new GreenhouseChart('mainChart');
+const sensorBuffer = { suhu: '', kelembaban: '', cahaya: '' };
 
-if (ctx) {
-  logChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: [] as string[],
-      datasets: [{
-        label: 'Suhu (°C)',
-        data: [] as number[],
-        borderColor: '#22c55e',
-        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-        borderWidth: 2,
-        pointRadius: 3,
-        fill: true,
-        tension: 0.4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { display: true, title: { display: true, text: 'Waktu' } },
-        y: { display: true, title: { display: true, text: 'Suhu (°C)' }, suggestedMin: 20, suggestedMax: 40 }
-      },
-      animation: { duration: 0 }
+function checkAndPushToChart() {
+  if (sensorBuffer.suhu && sensorBuffer.kelembaban && sensorBuffer.cahaya) {
+    greenhouseChart.updateData(sensorBuffer.suhu, sensorBuffer.kelembaban, sensorBuffer.cahaya);
+    sensorBuffer.suhu = '';
+    sensorBuffer.kelembaban = '';
+    sensorBuffer.cahaya = '';
+  }
+}
+
+// --- Inisialisasi MQTT Service dengan Callback Berbasis Kelas ---
+const mqttService = new MqttService(
+  () => {
+    elConnStatus.classList.replace('bg-red-500', 'bg-green-500');
+    elConnText.innerText = 'ONLINE & SINKRON';
+    elConnText.classList.replace('text-slate-600', 'text-green-600');
+  },
+  (topic, message) => {
+    const topics = mqttService.getTopics();
+    if (topic === topics.suhu) {
+      elSuhu.innerText = message;
+      sensorBuffer.suhu = message;
+    } 
+    else if (topic === topics.kelembaban) {
+      elKelembaban.innerText = message;
+      sensorBuffer.kelembaban = message;
     }
-  });
-}
-
-function updateChart(suhu: string): void {
-  if (!logChart) return;
-  
-  const now = new Date();
-  const timeLabel = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-  
-  const dataRef = logChart.data;
-  if (dataRef.labels && dataRef.labels.length > 20) {
-    dataRef.labels.shift();
-    dataRef.datasets[0].data.shift();
+    else if (topic === topics.cahaya) {
+      elCahaya.innerText = message;
+      sensorBuffer.cahaya = message;
+    }
+    checkAndPushToChart();
+  },
+  (err) => {
+    console.error('MQTT Error:', err);
+    elConnText.innerText = 'ERROR / DITOLAK';
+    elConnText.classList.replace('text-green-600', 'text-red-600');
+    elConnStatus.classList.replace('bg-green-500', 'bg-red-500');
   }
-  
-  dataRef.labels?.push(timeLabel);
-  dataRef.datasets[0].data.push(parseFloat(suhu));
-  logChart.update();
-}
-
-// --- Koneksi MQTT ---
-console.log('Mencoba terhubung ke broker...', brokerUrl);
-const client: MqttClient = mqtt.connect(brokerUrl, mqttOptions);
-
-client.on('connect', () => {
-  console.log('Berhasil terhubung ke MQTT Broker (HiveMQ Cloud)');
-  elConnStatus.classList.replace('bg-red-500', 'bg-green-500');
-  elConnText.innerText = 'Online';
-  
-  client.subscribe([TOPIC_SUHU, TOPIC_CAHAYA], (err) => {
-    if (err) console.error('Gagal subscribe:', err);
-  });
-});
-
-client.on('error', (err: Error) => {
-  console.error('Koneksi MQTT Error:', err);
-  elConnText.innerText = 'Error / Ditolak';
-});
-
-client.on('message', (topic: string, message: Buffer) => {
-  const val = message.toString();
-  if (topic === TOPIC_SUHU) {
-    elSuhu.innerText = val;
-    updateChart(val);
-  } else if (topic === TOPIC_CAHAYA) {
-    elCahaya.innerText = val;
-  }
-});
+);
 
 btnBuka.addEventListener('click', () => {
-  if (client.connected) {
-    client.publish(TOPIC_KONTROL, 'buka');
-    elStatus.innerText = 'Terbuka';
-    elStatus.classList.replace('text-slate-700', 'text-green-600');
-  } else {
-    alert('Belum terhubung ke broker MQTT!');
-  }
+  mqttService.publishKontrolAtap('buka');
+  elStatus.innerHTML = '<i class="fa-solid fa-lock-open text-emerald-500 mr-1"></i> STATUS: TERBUKA';
 });
 
 btnTutup.addEventListener('click', () => {
-  if (client.connected) {
-    client.publish(TOPIC_KONTROL, 'tutup');
-    elStatus.innerText = 'Tertutup';
-    elStatus.classList.replace('text-green-600', 'text-slate-700');
-  } else {
-    alert('Belum terhubung ke broker MQTT!');
-  }
+  mqttService.publishKontrolAtap('tutup');
+  elStatus.innerHTML = '<i class="fa-solid fa-lock text-red-500 mr-1"></i> STATUS: TERTUTUP';
 });
