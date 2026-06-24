@@ -1,13 +1,13 @@
-import mqtt, { MqttClient, IClientOptions } from 'mqtt';
+import mqtt, { type MqttClient, type IClientOptions } from 'mqtt';
 import Chart from 'chart.js/auto';
 
 // --- Konfigurasi HiveMQ Cloud ---
 // Gunakan awalan wss:// dan akhiri dengan port 8884 dan path /mqtt
-const brokerUrl: string = 'wss://271b811040564cd49620c495a0b86c55.s1.eu.hivemq.cloud:8884/mqtt';
+const brokerUrl: string = import.meta.env.VITE_MQTT_URL;
 
 const mqttOptions: IClientOptions = {
-  username: 'Andhika',
-  password: 'Andhika123',
+  username: import.meta.env.VITE_MQTT_USERNAME,
+  password: import.meta.env.VITE_MQTT_PASSWORD,
   clientId: `orakom_web_${Math.random().toString(16).slice(3)}`,
 };
 
