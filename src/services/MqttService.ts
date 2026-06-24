@@ -18,7 +18,6 @@ export class MqttService {
     onMessageCallback: (topic: string, message: string) => void,
     onErrorCallback: (err: Error) => void
   ) {
-    // 3. Masukkan nilainya ke dalam properti (this)
     this.onConnectCallback = onConnectCallback;
     this.onMessageCallback = onMessageCallback;
     this.onErrorCallback = onErrorCallback;

@@ -1,4 +1,5 @@
 import Chart from 'chart.js/auto';
+
 export class GreenhouseChart {
   private chart: Chart | null = null;
 
@@ -54,51 +55,32 @@ export class GreenhouseChart {
         plugins: { 
           legend: { display: false },
           tooltip: {
-            mode: 'index',
-            intersect: false,
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            titleColor: '#1e293b',
-            bodyColor: '#475569',
-            borderColor: '#e2e8f0',
-            borderWidth: 1
+            mode: 'index', intersect: false, backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            titleColor: '#1e293b', bodyColor: '#475569', borderColor: '#e2e8f0', borderWidth: 1
           }
         },
         scales: {
-          x: { 
-            grid: { display: false }, 
-            ticks: { color: '#64748b', maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } 
-          },
+          x: { grid: { display: false }, ticks: { color: '#64748b', maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
           y: {
-            type: 'linear', 
-            display: true, 
-            position: 'left',
-            grid: { color: '#f1f5f9' }, 
-            ticks: { color: '#64748b' },
-            suggestedMin: 0, 
-            suggestedMax: 100
+            type: 'linear', display: true, position: 'left',
+            grid: { color: '#f1f5f9' }, ticks: { color: '#64748b' },
+            suggestedMin: 0, suggestedMax: 100
           },
           y1: {
-            type: 'linear', 
-            display: true, 
-            position: 'right',
-            grid: { display: false }, 
-            ticks: { color: '#f59e0b' },
-            suggestedMin: 0, 
-            suggestedMax: 4095
+            type: 'linear', display: true, position: 'right',
+            grid: { display: false }, ticks: { color: '#f59e0b' },
+            suggestedMin: 0, suggestedMax: 4095
           }
         },
-        interaction: {
-          mode: 'nearest',
-          axis: 'x',
-          intersect: false
-        },
-        animation: { duration: 0 }
+        interaction: { mode: 'nearest', axis: 'x', intersect: false },
+        animation: { duration: 0 } 
       }
     });
   }
 
   public updateData(suhu: string, kelembaban: string, cahaya: string): void {
     if (!this.chart) return;
+
     const now = new Date();
     const timeLabel = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
     const dataRef = this.chart.data;
@@ -109,10 +91,12 @@ export class GreenhouseChart {
       dataRef.datasets[1].data.shift();
       dataRef.datasets[2].data.shift();
     }
+
     dataRef.labels?.push(timeLabel);
     dataRef.datasets[0].data.push(parseFloat(suhu));
     dataRef.datasets[1].data.push(parseFloat(kelembaban));
     dataRef.datasets[2].data.push(parseFloat(cahaya));
+
     this.chart.update();
   }
 }
