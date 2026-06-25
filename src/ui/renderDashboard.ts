@@ -1,0 +1,141 @@
+export interface DashboardElements {
+  elSuhu: HTMLSpanElement;
+  elKelembaban: HTMLSpanElement;
+  elCahaya: HTMLSpanElement;
+  elStatus: HTMLSpanElement;
+  elConnStatus: HTMLDivElement;
+  elConnText: HTMLSpanElement;
+  btnBuka: HTMLButtonElement;
+  btnTutup: HTMLButtonElement;
+  insightCard: HTMLDivElement;
+  insightIconBox: HTMLDivElement;
+  insightIcon: HTMLElement;
+  insightBgIcon: HTMLElement;
+  insightTitle: HTMLHeadingElement;
+  insightText: HTMLParagraphElement;
+}
+
+export function renderDashboard(root: HTMLElement): DashboardElements {
+  root.innerHTML = `
+    <div class="max-w-6xl mx-auto space-y-6">
+      <header class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col md:flex-row items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <div class="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center border border-green-100">
+            <i class="fa-solid fa-leaf text-xl"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold text-slate-800 tracking-tight">Smart Greenhouse</h1>
+            <p class="text-slate-500 text-sm">Dashboard Monitoring IoT</p>
+          </div>
+        </div>
+        <div class="mt-4 md:mt-0 flex items-center bg-slate-50 px-4 py-2 rounded-lg border border-slate-200">
+          <div id="connectionStatus" class="w-2.5 h-2.5 rounded-full bg-red-500 mr-2 animate-pulse-slow"></div>
+          <span id="connectionText" class="text-xs font-semibold text-slate-600 tracking-wide">MENGHUBUNGKAN...</span>
+        </div>
+      </header>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col justify-between">
+          <div class="flex justify-between items-center mb-4">
+            <p class="text-xs font-semibold text-slate-500 tracking-wider">SUHU UDARA</p>
+            <i class="fa-solid fa-temperature-half text-blue-500 opacity-80"></i>
+          </div>
+          <div class="flex items-baseline">
+            <h2 class="text-3xl font-bold text-slate-800" id="suhuValue">--</h2>
+            <span class="text-sm text-slate-500 font-medium ml-1">°C</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col justify-between">
+          <div class="flex justify-between items-center mb-4">
+            <p class="text-xs font-semibold text-slate-500 tracking-wider">KELEMBABAN</p>
+            <i class="fa-solid fa-droplet text-green-500 opacity-80"></i>
+          </div>
+          <div class="flex items-baseline">
+            <h2 class="text-3xl font-bold text-slate-800" id="kelembabanValue">--</h2>
+            <span class="text-sm text-slate-500 font-medium ml-1">%</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col justify-between">
+          <div class="flex justify-between items-center mb-4">
+            <p class="text-xs font-semibold text-slate-500 tracking-wider">CAHAYA (LDR)</p>
+            <i class="fa-solid fa-sun text-amber-500 opacity-80"></i>
+          </div>
+          <div class="flex items-baseline">
+            <h2 class="text-3xl font-bold text-slate-800" id="cahayaValue">--</h2>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-col justify-between">
+          <div class="flex gap-2 h-full">
+            <button id="btnBuka" class="flex-1 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 font-semibold rounded-xl transition-colors text-xs flex flex-col items-center justify-center gap-1.5 active:scale-95">
+              <i class="fa-solid fa-arrow-up text-lg"></i> BUKA
+            </button>
+            <button id="btnTutup" class="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold rounded-xl transition-colors text-xs flex flex-col items-center justify-center gap-1.5 active:scale-95">
+              <i class="fa-solid fa-arrow-down text-lg"></i> TUTUP
+            </button>
+          </div>
+          <div class="mt-3 text-center">
+            <span id="statusAtap" class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">MENUNGGU...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col h-full">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+            <h3 class="text-sm font-semibold text-slate-700 tracking-wide">Log Pemantauan Real-time</h3>
+            <div class="flex items-center space-x-4 text-xs font-medium text-slate-500">
+              <span class="flex items-center"><div class="w-2 h-2 rounded-full bg-blue-500 mr-1.5"></div> Suhu</span>
+              <span class="flex items-center"><div class="w-2 h-2 rounded-full bg-green-500 mr-1.5"></div> Kelembaban</span>
+              <span class="flex items-center"><div class="w-2 h-2 rounded-full bg-amber-500 mr-1.5"></div> Cahaya</span>
+            </div>
+          </div>
+          <div class="w-full flex-1 min-h-[350px]">
+            <canvas id="mainChart"></canvas>
+          </div>
+        </div>
+
+        <div id="insightCard" class="lg:col-span-1 bg-blue-50 border border-blue-200 rounded-2xl p-6 shadow-sm transition-colors duration-500 flex flex-col h-full relative overflow-hidden">
+          <i id="insightBgIcon" class="fa-solid fa-robot absolute -right-6 -bottom-6 text-8xl text-blue-500 opacity-5 transition-colors duration-500"></i>
+          <div class="flex items-center space-x-3 mb-4 relative z-10">
+            <div id="insightIconBox" class="w-12 h-12 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-600 transition-colors duration-500">
+              <i id="insightIcon" class="fa-solid fa-robot text-xl"></i>
+            </div>
+            <h3 id="insightTitle" class="text-sm font-bold text-blue-800 tracking-wide uppercase leading-tight">Sistem Siaga</h3>
+          </div>
+          <p id="insightText" class="text-sm text-blue-700 font-medium leading-relaxed flex-1 relative z-10">
+            Menunggu sinkronisasi data sensor untuk melakukan analisis kondisi tanaman...
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return {
+    elSuhu: getRequiredElement<HTMLSpanElement>('suhuValue'),
+    elKelembaban: getRequiredElement<HTMLSpanElement>('kelembabanValue'),
+    elCahaya: getRequiredElement<HTMLSpanElement>('cahayaValue'),
+    elStatus: getRequiredElement<HTMLSpanElement>('statusAtap'),
+    elConnStatus: getRequiredElement<HTMLDivElement>('connectionStatus'),
+    elConnText: getRequiredElement<HTMLSpanElement>('connectionText'),
+    btnBuka: getRequiredElement<HTMLButtonElement>('btnBuka'),
+    btnTutup: getRequiredElement<HTMLButtonElement>('btnTutup'),
+    insightCard: getRequiredElement<HTMLDivElement>('insightCard'),
+    insightIconBox: getRequiredElement<HTMLDivElement>('insightIconBox'),
+    insightIcon: getRequiredElement<HTMLElement>('insightIcon'),
+    insightBgIcon: getRequiredElement<HTMLElement>('insightBgIcon'),
+    insightTitle: getRequiredElement<HTMLHeadingElement>('insightTitle'),
+    insightText: getRequiredElement<HTMLParagraphElement>('insightText')
+  };
+}
+
+function getRequiredElement<T extends HTMLElement>(id: string): T {
+  const element = document.getElementById(id);
+  if (!element) {
+    throw new Error(`Element #${id} tidak ditemukan`);
+  }
+
+  return element as T;
+}
