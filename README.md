@@ -33,18 +33,20 @@ Ikuti langkah-langkah berikut untuk menjalankan dashboard ini di komputer Anda:
    git clone [https://github.com/ndhika/dashboard-greenhouse_iot.git](https://github.com/ndhika/dashboard-greenhouse_iot.git)
    cd dashboard-greenhouse_iot
 Instal dependensi:
-
-Bash
-npm install
+   ```Bash
+   npm install
+  ```
 
 # atau jika menggunakan yarn:
-yarn install
-
-Bash
-npm run dev
-
+   ```Bash
+   yarn install
+   ```
+   ```Bash
+   npm run dev
+   ```
 # atau:
-yarn dev
-
+   ```Bash
+   yarn dev
+   ```
 
 Dibuat dengan ❤️ untuk mengintegrasikan teknologi ke dalam inovasi pertanian.
