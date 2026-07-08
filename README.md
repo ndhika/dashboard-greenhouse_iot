@@ -49,4 +49,4 @@ Instal dependensi:
    yarn dev
    ```
 
-Dibuat dengan ❤️ untuk mengintegrasikan teknologi ke dalam inovasi pertanianaa.
+Dibuat dengan ❤️ untuk mengintegrasikan teknologi ke dalam inovasi pertaniana.
